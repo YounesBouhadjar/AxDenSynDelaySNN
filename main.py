@@ -8,9 +8,8 @@ import torch
 import wandb
 import os
 import numpy as np
-import importlib
 from utils import set_seed
-from config_loader import load_config
+from utils import load_config
 
 from datasets import SHD_dataloaders, SSC_dataloaders, GSC_dataloaders
 from models.snn_delays import SnnDelays
