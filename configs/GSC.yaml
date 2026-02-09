@@ -25,7 +25,7 @@ seed:
         - 0
 data_from_dcls_code_base:
     values:
-        - true
+        - false
 
 # ============================================================================
 # Model Architecture
@@ -39,6 +39,9 @@ n_hidden_layers:
 n_hidden_neurons:
     values:
         - 512
+n_inputs:
+    values:
+        - 40
 
 # ============================================================================
 # Training Settings

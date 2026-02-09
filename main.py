@@ -12,7 +12,7 @@ import importlib
 from utils import set_seed
 from config_loader import load_config
 
-from datasets import SHD_dataloaders, SSC_dataloaders, GSC_dataloaders, SHD_NORM_dataloaders, SSC_NORM_dataloaders
+from datasets import SHD_dataloaders, SSC_dataloaders, GSC_dataloaders
 from models.snn_delays import SnnDelays
 from models.snn import SNN
 import utils
@@ -82,7 +82,8 @@ except Exception as e:
     raise Exception(f'Failed to load config from {args.config}: {e}')
 
 # Overwrite config parameters with command-line arguments if provided
-# Overwrite any config attribute if provided as a command-line argument
+# Overwrite any config attrite if provided as a command-line argument
+#TODO: the following is not necessary if the args are copied before calling load_config
 for arg_key, arg_value in vars(args).items():
     if arg_value is not None and hasattr(config, arg_key):
         if arg_key == 'max_delay':
@@ -195,8 +196,6 @@ if config.use_regularizers:
 if config.dataset == 'shd':
     train_loader, valid_loader = SHD_dataloaders(config)
     test_loader = None
-elif config.dataset == 'shd_norm':
-    train_loader, valid_loader, test_loader = SHD_NORM_dataloaders(config)
 elif config.dataset == 'ssc':
     train_loader, valid_loader, test_loader = SSC_dataloaders(config)
 elif config.dataset == 'gsc':

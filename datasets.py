@@ -10,6 +10,9 @@ https://github.com/Thvnvtos/SNN-delays
 from utils import set_seed
 
 import numpy as np
+import logging
+import os
+from pathlib import Path
 
 from torch.utils.data import DataLoader
 from typing import Callable, Optional
@@ -21,11 +24,13 @@ from spikingjelly.datasets.shd import SpikingSpeechCommands
 from spikingjelly.datasets import pad_sequence_collate
 
 import torch
+import torchaudio
 from torchaudio.transforms import Spectrogram, MelScale, AmplitudeToDB, Resample
 from torchaudio.datasets.speechcommands import SPEECHCOMMANDS
-from torchvision import transforms
 from torch.utils.data import Dataset
 import augmentations
+
+logger = logging.getLogger(__name__)
 
 
 class RNoise(object):
@@ -111,14 +116,29 @@ class Augs(object):
 def SHD_dataloaders(config):
   set_seed(config.seed)
 
-  train_dataset = BinnedSpikingHeidelbergDigits(config.datasets_path, config.n_bins, train=True, data_type='frame', duration=config.time_step)
-  test_dataset= BinnedSpikingHeidelbergDigits(config.datasets_path, config.n_bins, train=False, data_type='frame', duration=config.time_step)
+  train_dataset = BinnedSpikingHeidelbergDigits(config.datasets_path,
+                                                config.n_bins,
+                                                train=True,
+                                                data_type='frame',
+                                                duration=config.time_step)
+  test_dataset= BinnedSpikingHeidelbergDigits(config.datasets_path,
+                                              config.n_bins,
+                                              train=False,
+                                              data_type='frame',
+                                              duration=config.time_step)
 
   #train_dataset, valid_dataset = random_split(train_dataset, [0.8, 0.2])
 
-  train_loader = DataLoader(train_dataset, collate_fn=pad_sequence_collate, batch_size=config.batch_size, shuffle=True, num_workers=4)
+  train_loader = DataLoader(train_dataset,
+                                 collate_fn=pad_sequence_collate,
+                                 batch_size=config.batch_size,
+                                 shuffle=True,
+                                 num_workers=4)
   #valid_loader = DataLoader(valid_dataset, collate_fn=pad_sequence_collate, batch_size=config.batch_size)
-  test_loader = DataLoader(test_dataset, collate_fn=pad_sequence_collate, batch_size=config.batch_size, num_workers=4)
+  test_loader = DataLoader(test_dataset,
+                                collate_fn=pad_sequence_collate,
+                                batch_size=config.batch_size,
+                                num_workers=4)
 
   return train_loader, test_loader
 
@@ -190,103 +210,67 @@ def create_dataloaders(X, Y, dataset_name, batch_size=128, train_ratio=0.6, val_
     return train_loader, val_loader, test_loader
 
 
-def SHD_NORM_dataloaders(config):
-
-    # Load SHD-Norm
-    X_shd, Y_shd = load_shd_norm()
-    shd_train_loader, shd_val_loader, shd_test_loader = create_dataloaders(
-    X_shd, Y_shd, "SHD-Norm", batch_size=config.batch_size)
-
-    return shd_train_loader, shd_val_loader, shd_test_loader
-
-def SSC_NORM_dataloaders(config):
-
-    # Load SSC-Norm  
-    X_ssc, Y_ssc = load_ssc_norm()
-    ssc_train_loader, ssc_val_loader, ssc_test_loader = create_dataloaders(
-        X_ssc, Y_ssc, "SSC-Norm", batch_size=config.batch_size)
-  
-    return ssc_train_loader, ssc_val_loader, ssc_test_loader
-
-
 def SSC_dataloaders(config):
   set_seed(config.seed)
 
+  train_dataset = BinnedSpikingSpeechCommands(config.datasets_path,
+                                              config.n_bins,
+                                              split='train',
+                                              data_type='frame',
+                                              duration=config.time_step)
+  valid_dataset = BinnedSpikingSpeechCommands(config.datasets_path,
+                                              config.n_bins,
+                                              split='valid',
+                                              data_type='frame',
+                                              duration=config.time_step)
+  test_dataset = BinnedSpikingSpeechCommands(config.datasets_path,
+                                             config.n_bins,
+                                             split='test',
+                                             data_type='frame',
+                                             duration=config.time_step)
 
-  if getattr(config, 'data_from_dcls_code_base', True):
 
-    train_dataset = BinnedSpikingSpeechCommands(config.datasets_path, config.n_bins, split='train', data_type='frame', duration=config.time_step)
-    valid_dataset = BinnedSpikingSpeechCommands(config.datasets_path, config.n_bins, split='valid', data_type='frame', duration=config.time_step)
-    test_dataset = BinnedSpikingSpeechCommands(config.datasets_path, config.n_bins, split='test', data_type='frame', duration=config.time_step)
-
-
-    train_loader = DataLoader(train_dataset, collate_fn=pad_sequence_collate, batch_size=config.batch_size, shuffle=True, num_workers=4)
-    valid_loader = DataLoader(valid_dataset, collate_fn=pad_sequence_collate, batch_size=config.batch_size, num_workers=4)
-    test_loader = DataLoader(test_dataset, collate_fn=pad_sequence_collate, batch_size=config.batch_size, num_workers=4)
-
-  else:
-    import sys
-    sys.path.append('/Users/ybouhadjar/projects/SSM-inspired-LIF/dataloaders')
-    from spiking_datasets import load_shd_or_ssc
-
-    train_loader = load_shd_or_ssc(
-                    dataset_name='ssc',
-                    data_folder=config.datasets_path,
-                    split="train",
-                    batch_size=config.batch_size,
-                    nb_steps=config.nb_steps,
-                    max_time = config.max_time,
-                    spatial_bin = config.n_bins,
-                    shuffle=True,
-                    workers=4,
-                    dcls_code_base=True
-                )
-    valid_loader = load_shd_or_ssc(
-                    dataset_name='ssc',
-                    data_folder=config.datasets_path,
-                    split="valid",
-                    batch_size=config.batch_size,
-                    nb_steps=config.nb_steps,
-                    max_time = config.max_time,
-                    spatial_bin = config.n_bins,
-                    shuffle=False,
-                    workers=4,
-                    dcls_code_base=True
-                )
-    test_loader = load_shd_or_ssc(
-                        dataset_name='ssc',
-                        data_folder=config.datasets_path,
-                        split="test",
-                        batch_size=config.batch_size,
-                        nb_steps=config.nb_steps,
-                        max_time = config.max_time,
-                        spatial_bin = config.n_bins,
-                        shuffle=False,
-                        workers=4,
-                        dcls_code_base=True
-                    )
+  train_loader = DataLoader(train_dataset,
+                                 collate_fn=pad_sequence_collate,
+                                 batch_size=config.batch_size,
+                                 shuffle=True,
+                                 num_workers=4)
+  valid_loader = DataLoader(valid_dataset,
+                                 collate_fn=pad_sequence_collate,
+                                 batch_size=config.batch_size,
+                                 num_workers=4)
+  test_loader = DataLoader(test_dataset,
+                                collate_fn=pad_sequence_collate,
+                                batch_size=config.batch_size,
+                                num_workers=4)
 
   return train_loader, valid_loader, test_loader
+
 
 def GSC_dataloaders(config):
   set_seed(config.seed)
 
+  # TODO: two cases will be merged into one using different parameters
   if config.data_from_dcls_code_base:
 
-    train_dataset = GSpeechCommands(config.datasets_path, 'training', transform=build_transform(False), target_transform=target_transform)
-    valid_dataset = GSpeechCommands(config.datasets_path, 'validation', transform=build_transform(False), target_transform=target_transform)
-    test_dataset = GSpeechCommands(config.datasets_path, 'testing', transform=build_transform(False), target_transform=target_transform)
+    train_dataset = GSpeechCommands(config.datasets_path,
+                                    'training',
+                                    transform=build_transform(False),
+                                    target_transform=target_transform)
+    valid_dataset = GSpeechCommands(config.datasets_path,
+                                    'validation',
+                                    transform=build_transform(False),
+                                    target_transform=target_transform)
+    test_dataset = GSpeechCommands(config.datasets_path,
+                                   'testing',
+                                   transform=build_transform(False),
+                                   target_transform=target_transform)
 
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size, shuffle=True, num_workers=4)
     valid_loader = DataLoader(valid_dataset, batch_size=config.batch_size, num_workers=4)
     test_loader = DataLoader(test_dataset, batch_size=config.batch_size, num_workers=4)
   
   else:
-
-    import sys
-    sys.path.append('/Users/ybouhadjar/projects/SSM-inspired-LIF/dataloaders')
-    from nonspiking_datasets import load_hd_or_sc
-
     train_loader = load_hd_or_sc(
                     dataset_name='sc',
                     data_folder=config.datasets_path,
@@ -295,7 +279,6 @@ def GSC_dataloaders(config):
                     use_augm=False,
                     shuffle=True,
                     workers=4,
-                    dcls_code_base=True
                 )
     valid_loader = load_hd_or_sc(
                     dataset_name='sc',
@@ -305,7 +288,6 @@ def GSC_dataloaders(config):
                     use_augm=False,
                     shuffle=False,
                     workers=4,
-                    dcls_code_base=True
                 )
     test_loader = load_hd_or_sc(
                         dataset_name='sc',
@@ -315,7 +297,6 @@ def GSC_dataloaders(config):
                         use_augm=False,
                         shuffle=False,
                         workers=4,
-                        dcls_code_base=True
                     )
 
   return train_loader, valid_loader, test_loader
@@ -497,3 +478,199 @@ class GSpeechCommands(Dataset):
             target = self.target_transform(target)
 
         return waveform, target, torch.zeros(1)
+
+
+# ============================================================================
+# Non-spiking dataset classes
+# ============================================================================
+#
+# SPDX-FileCopyrightText: Copyright © 2022 Idiap Research Institute <contact@idiap.ch>
+#
+# SPDX-FileContributor: Alexandre Bittar <abittar@idiap.ch>
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# This file is part of the sparch package
+#
+class SpeechCommands(Dataset):
+    """
+    Dataset class for the original non-spiking Speech Commands (SC)
+    dataset. Generated mel-spectrograms use 40 bins by default.
+
+    Arguments
+    ---------
+    data_folder : str
+        Path to folder containing the Heidelberg Digits dataset.
+    split : str
+        Split of the HD dataset, must be either "train" or "test".
+    use_augm : bool
+        Whether to perform data augmentation or not.
+    min_snr, max_snr : float
+        Minimum and maximum amounts of noise if augmentation is used.
+    p_noise : float in (0, 1)
+        Probability to apply noise if augmentation is used, i.e.,
+        proportion of examples to which augmentation is applied.
+    """
+
+    def __init__(
+        self,
+        data_folder,
+        split,
+        use_augm,
+        min_snr,
+        max_snr,
+        p_noise,
+    ):
+
+        if split not in ["training", "validation", "testing"]:
+            raise ValueError(f"Invalid split {split}")
+
+        # Get paths to all audio files
+        self.data_folder = data_folder
+        EXCEPT_FOLDERs = ["_background_noise_", "SpeechCommands"]
+
+        def load_list(filename):
+            filepath = os.path.join(self.data_folder, filename)
+            with open(filepath) as f:
+                return [os.path.join(self.data_folder, i.strip()) for i in f]
+
+        if split == "training":
+            files = sorted(str(p) for p in Path(data_folder).glob("*/*.wav"))
+            exclude = load_list("validation_list.txt") + load_list("testing_list.txt")
+            exclude = set(exclude)
+            self.file_list = [
+                w for w in files if w not in exclude and EXCEPT_FOLDERs[0] not in w
+            ]
+        else:
+            self.file_list = load_list(str(split) + "_list.txt")
+
+        self.labels = sorted(next(os.walk(data_folder))[1])[1:]
+        for EXCEPT_FOLDER in EXCEPT_FOLDERs:
+            if EXCEPT_FOLDER in self.labels:
+                self.labels.remove(EXCEPT_FOLDER)
+
+        # Data augmentation
+        # Note: torchaudio_augmentations imports are commented out in original
+        # If augmentation is needed, uncomment and install torchaudio_augmentations
+        if use_augm and split == "training":
+            # transforms = [
+            #     RandomApply([PolarityInversion()], p=0.8),
+            #     RandomApply([Noise(min_snr, max_snr)], p_noise),
+            #     RandomApply([Gain()], p=0.3),
+            #     RandomApply([Reverb(sample_rate=16000)], p=0.6),
+            # ]
+            # self.transf = ComposeMany(transforms, num_augmented_samples=1)
+            logger.warning("Data augmentation requested but torchaudio_augmentations not available. Skipping augmentation.")
+            self.transf = lambda x: x.unsqueeze(dim=0)
+        else:
+            self.transf = lambda x: x.unsqueeze(dim=0)
+
+    def __len__(self):
+        return len(self.file_list)
+
+    def __getitem__(self, index):
+
+        # Read waveform
+        filename = self.file_list[index]
+        x, _ = torchaudio.load(filename)
+
+        # Apply augmentation
+        x = self.transf(x).squeeze(dim=0)
+
+        # Compute acoustic features
+        x = torchaudio.compliance.kaldi.fbank(x, num_mel_bins=40)
+
+        # Get label
+        relpath = os.path.relpath(filename, self.data_folder)
+        label, _ = os.path.split(relpath)
+        y = torch.tensor(self.labels.index(label))
+        
+        return x, y
+
+    def generateBatch(self, batch):
+
+        xs, ys = zip(*batch)
+        xlens = torch.tensor([x.shape[0] for x in xs])
+        xs = torch.nn.utils.rnn.pad_sequence(xs, batch_first=True)
+        ys = torch.LongTensor(ys)
+
+        return xs, ys, xlens
+
+
+def load_hd_or_sc(
+    dataset_name,
+    data_folder,
+    split,
+    batch_size,
+    shuffle=True,
+    use_augm=False,
+    min_snr=0.0001,
+    max_snr=0.9,
+    p_noise=0.1,
+    workers=0,
+):
+    """
+    This function creates a dataloader for a given split of
+    the HD or SC dataset.
+
+    Arguments
+    ---------
+    dataset_name : str
+        The name of the dataset, either hd or sc.
+    data_folder : str
+        Path to folder containing the desired dataset.
+    split : str
+        Split of the desired dataset, must be either "train" or "test" for hd
+        and "training", "validation" or "testing" for sc.
+    batch_size : int
+        Number of examples in a single generated batch.
+    shuffle : bool
+        Whether to shuffle examples or not.
+    use_augm : bool
+        Whether to perform data augmentation or not.
+    min_snr, max_snr : float
+        Minimum and maximum amounts of noise if augmentation is used.
+    p_noise : float in (0, 1)
+        Probability to apply noise if augmentation is used, i.e.,
+        proportion of examples to which augmentation is applied.
+    workers : int
+        Number of workers.
+    """
+    if dataset_name not in ["hd", "sc"]:
+        raise ValueError(f"Invalid dataset name {dataset_name}")
+
+    if split not in ["train", "valid", "test"]:
+        raise ValueError(f"Invalid split name {split}")
+
+    if dataset_name == "hd":
+
+        if split in ["valid", "test"]:
+            split = "test"
+            logger.info("\nHD uses the same split for validation and testing.\n")
+
+        dataset = HeidelbergDigits(
+            data_folder, split, use_augm, min_snr, max_snr, p_noise
+        )
+
+    else:
+        if split == "train":
+            split = "training"
+        elif split == "valid":
+            split = "validation"
+        else:
+            split = "testing"
+
+        dataset = SpeechCommands(
+            data_folder, split, use_augm, min_snr, max_snr, p_noise)
+
+    logger.info(f"Number of examples in {dataset_name} {split} set: {len(dataset)}")
+
+    loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        collate_fn=dataset.generateBatch,
+        shuffle=shuffle,
+        num_workers=workers,
+        pin_memory=True,
+    )
+    return loader

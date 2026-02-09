@@ -39,6 +39,9 @@ n_hidden_layers:
 n_hidden_neurons:
     values:
         - 512
+n_inputs:
+    values:
+        - 40
 
 # ============================================================================
 # Training Settings
@@ -89,10 +92,10 @@ stateful_synapse_tau_ms:
 # ============================================================================
 sparsity_p:
     values:
-        - 0
+        - 0.6
 sparsity_p_delay:
     values:
-        - 0
+        - 0.8
 dropout_p:
     values:
         - 0.25
