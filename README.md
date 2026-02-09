@@ -1,4 +1,4 @@
-# Sparse Axonal and Dendritic Delays Enable Competitive SNNs for Keyword Classification
+# Axonal, Dendritic, and Synaptic Delays in SNNs
 
 This repository contains source code to reproduce the experiments presented in the paper "Sparse Axonal and Dendritic Delays Enable Competitive SNNs for Keyword Classification".
 This implementation builds heavily on the original repository [https://github.com/Thvnvtos/SNN-delays](https://github.com/Thvnvtos/SNN-delays), which is the official implementation of "Learning Delays in Spiking Neural Networks using Dilated Convolutions with Learnable Spacings" (ICLR 2024).
@@ -45,7 +45,6 @@ git checkout 9844cdb65831f8076e18bd813d9e90bb53a59742
 pip install -e .
 cd ..
 ```
-Installing SpikingJelly using ```pip``` is not yet compatible with this repo.
 
 ## Working with SNN-Delays
 
@@ -71,7 +70,7 @@ Accepted values are `axonal`, `dendritic`, and `synaptic`.
 
 To train a new model as defined by a config file for say axonal delays, simply use:
 ```bash
-python main.py --config configs/SHD.yaml --delay_type axonal
+python main.py --config configs/SSC.yaml --delay_type axonal
 ```
 
 and for sparse axonal delays:

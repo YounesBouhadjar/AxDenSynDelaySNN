@@ -1,0 +1,25 @@
+project: SNNDelays
+program: main.py
+method: grid
+metric:
+  name: best_acc_test
+  goal: maximize
+parameters:
+  delay_type:
+    values: [axonal]
+  seed:
+    values: [0, 1, 2, 3, 4]
+  sparsity_p_delay:
+    values: [0., 0.2, 0.4, 0.6, 0.8, 0.9]
+  sparsity_p:
+    values: [0., 0.2, 0.4, 0.6, 0.8, 0.9]
+  max_delay:
+    values: [15]
+
+command:
+  - ${env}
+  - python
+  - ${program}
+  - --config
+  - configs/SSC_sparsity.yaml
+  - ${args}

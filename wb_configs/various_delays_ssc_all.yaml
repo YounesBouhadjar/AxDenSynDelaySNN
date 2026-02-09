@@ -1,0 +1,21 @@
+project: SNNDelays
+program: main.py
+method: grid
+metric:
+  name: best_acc_test
+  goal: maximize
+parameters:
+  delay_type:
+    values: [axonal, synaptic, dendritic]
+  seed:
+    values: [0, 1, 2, 3, 4]
+  max_delay:
+    values: [15, 30]
+
+command:
+  - ${env}
+  - python
+  - ${program}
+  - --config
+  - configs/SSC.yaml
+  - ${args}

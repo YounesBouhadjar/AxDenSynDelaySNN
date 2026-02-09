@@ -1,0 +1,183 @@
+# ============================================================================
+# General/System Settings
+# ============================================================================
+debug:
+    values:
+        - false
+test_pretrained_model:
+    values:
+        - false
+use_wandb:
+    values:
+        - true
+
+# ============================================================================
+# Dataset Settings
+# ============================================================================
+dataset:
+    values:
+        - ssc
+datasets_path:
+    values:
+        - datasets/SSC
+seed:
+    values:
+        - 0
+
+# ============================================================================
+# Model Architecture
+# ============================================================================
+model_type:
+    values:
+        - snn_delays
+n_hidden_layers:
+    values:
+        - 3
+n_hidden_neurons:
+    values:
+        - 512
+
+# ============================================================================
+# Training Settings
+# ============================================================================
+epochs:
+    values:
+        - 60
+batch_size:
+    values:
+        - 128
+time_step:
+    values:
+        - 10
+n_bins:
+    values:
+        - 5
+
+# ============================================================================
+# Spiking Neuron Parameters
+# ============================================================================
+spiking_neuron_type:
+    values:
+        - lif
+spiking_neuron_output_type:
+    values:
+        - lif
+init_tau:
+    values:
+        - 15
+init_tau_ms:
+    values:
+        - 15
+stateful_synapse:
+    values:
+        - false
+stateful_synapse_learnable:
+    values:
+        - false
+stateful_synapse_tau:
+    values:
+        - 10.0
+stateful_synapse_tau_ms:
+    values:
+        - 10.0
+
+# ============================================================================
+# Network Regularization
+# ============================================================================
+sparsity_p:
+    values:
+        - 0
+dropout_p:
+    values:
+        - 0.25
+use_batchnorm:
+    values:
+        - true
+bias:
+    values:
+        - false
+bias_layer:
+    values:
+        - false
+detach_reset:
+    values:
+        - true
+conv_bn_penalty:
+    values:
+        - false
+
+# ============================================================================
+# Loss Function
+# ============================================================================
+loss:
+    values:
+        - sum
+loss_fn:
+    values:
+        - CEloss
+v_threshold:
+    values:
+        - 1.0
+alpha:
+    values:
+        - 5.0
+surrogate_type:
+    values:
+        - ATan
+
+# ============================================================================
+# Optimization
+# ============================================================================
+optimizer_w:
+    values:
+        - adam
+optimizer_pos:
+    values:
+        - adam
+lr_w:
+    values:
+        - 0.001
+scheduler_w:
+    values:
+        - one_cycle
+weight_decay:
+    values:
+        - 1.0e-05
+init_w_method:
+    values:
+        - kaiming_uniform
+
+# ============================================================================
+# Regularization
+# ============================================================================
+use_regularizers:
+    values:
+        - false
+reg_factor:
+    values:
+        - 0.5
+reg_fmin:
+    values:
+        - 0.001
+reg_fmax:
+    values:
+        - 0.01
+
+# ============================================================================
+# Delay-Specific Parameters
+# ============================================================================
+delay_type:
+    values:
+        - synaptic
+decrease_sig_method:
+    values:
+        - exp
+kernel_count:
+    values:
+        - 1
+init_pos_method:
+    values:
+        - uniform
+max_delay_ms:
+    values:
+        - 300

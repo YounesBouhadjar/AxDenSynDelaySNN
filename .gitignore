@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.npy
+*.ipynb
+*.png
+*.pdf
+
+Test_On_FPGA
+generate_sweep_id.py
+miscellaneous
+
+*.sh
+
+# Model checkpoints
+*.pt
+*.pth
+ckpt_models/
+
+# Weights & Biases
+wandb/
+wb_configs/
+
+# Logs
+log/
+logs/
+*.log
+*.txt
+*.md
+
+# Datasets
+Datasets/
+datasets/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+eventid*.pt
