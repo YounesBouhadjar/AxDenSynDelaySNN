@@ -1,7 +1,7 @@
 # Axonal, Dendritic, and Synaptic Delays in SNNs
 
-This repository contains source code to reproduce the experiments presented in the paper "Sparse Axonal and Dendritic Delays Enable Competitive SNNs for Keyword Classification".
-This implementation builds heavily on the original repository [https://github.com/Thvnvtos/SNN-delays](https://github.com/Thvnvtos/SNN-delays), which is the official implementation of "Learning Delays in Spiking Neural Networks using Dilated Convolutions with Learnable Spacings" (ICLR 2024). Compared to the original codebase, this version improves readability and overall structure, and  includes the implementation of axonal and dendritic delays.
+This repository contains source code to reproduce the experiments presented in the paper "Sparse Axonal and Dendritic Delays Enable Competitive SNNs for Keyword Classification" (2026), arXiv preprint [arXiv:2602.09746](https://arxiv.org/abs/2602.09746).
+This implementation builds heavily on the original repository [https://github.com/Thvnvtos/SNN-delays](https://github.com/Thvnvtos/SNN-delays), which is the official implementation of "Learning Delays in Spiking Neural Networks using Dilated Convolutions with Learnable Spacings" (ICLR 2024). Compared to the original codebase, this version improves readability and overall structure, and includes the implementation of axonal and dendritic delays.
 
 > **⚠️ Warning**: The code does not yet include all experiments from the paper, and some parts of the codebase have not been fully tested after recent cleanup and refactoring. These issues will be addressed very shortly with detailed experimentation.
 
@@ -115,11 +115,17 @@ You can run multiple agents in parallel across machines to accelerate experiment
 
 If you use this code in your work, please cite the following paper:
 
-```
-@article{Bouhadjar26_,
-  title={Sparse Axonal and Dendritic Delays Enable Competitive SNNs for Keyword Classification},
-  author={Bouhadjar, Younes and Neftci, Emre O},
-  year={2026}
+* Bouhadjar, Y., Neftci, E. (2026). Sparse Axonal and Dendritic Delays Enable Competitive SNNs for Keyword Classification. [arXiv:2602.09746](https://arxiv.org/abs/2602.09746)
+
+```bibtex
+@misc{Bouhadjar26_sparsedelays,
+      title={Sparse Axonal and Dendritic Delays Enable Competitive SNNs for Keyword Classification}, 
+      author={Younes Bouhadjar and Emre Neftci},
+      year={2026},
+      eprint={2602.09746},
+      publisher={arXiv},
+      doi={10.48550/arXiv.2602.09746},
+      url={https://arxiv.org/abs/2602.09746}, 
 }
 ```
 
