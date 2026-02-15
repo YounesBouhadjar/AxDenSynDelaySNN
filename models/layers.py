@@ -263,12 +263,8 @@ class DelayLayer(nn.Module):
         Number of output neurons
     config : object
         Configuration object with all model parameters
-    is_first_layer : bool
-        Whether this is the first layer
     is_output_layer : bool
         Whether this is the output layer
-    layer_idx : int
-        Index of this layer (for hidden layers)
     """
     
     def __init__(
@@ -276,50 +272,33 @@ class DelayLayer(nn.Module):
         input_size,
         hidden_size,
         config,
-        is_first_layer=False,
         is_output_layer=False,
-        layer_idx=0
     ):
         super().__init__()
         
         self.input_size = int(input_size)
         self.hidden_size = int(hidden_size)
         self.config = config
-        self.is_first_layer = is_first_layer
         self.is_output_layer = is_output_layer
-        self.layer_idx = layer_idx
         self.delay_type = getattr(config, 'delay_type', 'synaptic')
-        
+
+        if self.delay_type == 'dendritic':
+            self.W = nn.Linear(
+                self.input_size,
+                self.hidden_size,
+                bias=config.bias_layer
+            )
+
         # Delay layer (DCLS)
         self._init_delay_layer()
-        
-        # Linear layer for axonal/dendritic delays
-        if self.delay_type in ['axonal', 'dendritic']:
-            if is_first_layer:
-                self.W = nn.Linear(
-                    self.input_size,
-                    self.hidden_size,
-                    bias=config.bias_layer
-                )
-            elif not is_output_layer:
-                self.Wh = nn.Linear(
-                    self.hidden_size,
-                    self.hidden_size,
-                    bias=config.bias_layer
-                )
-            if is_output_layer:
-                # For axonal delays: Wf maps input_size -> hidden_size (after delay on input features)
-                # For dendritic delays: Wf maps input_size -> hidden_size (before delay on output features)
-                # For synaptic delays: delay layer handles the mapping, Wf not used
-                if self.delay_type == 'axonal' or self.delay_type == 'dendritic':
-                    self.Wf = nn.Linear(
-                        self.input_size,
-                        self.hidden_size,
-                        bias=config.bias
-                    )
-                else:  # synaptic - Wf not used, delay layer handles mapping
-                    self.Wf = None
-        
+
+        if self.delay_type == 'axonal':
+            self.W = nn.Linear(
+                self.input_size,
+                self.hidden_size,
+                bias=config.bias_layer
+            )
+ 
         # Batch normalization
         self.normalize = False
         if config.use_batchnorm and not is_output_layer:
@@ -390,37 +369,20 @@ class DelayLayer(nn.Module):
     def _init_delay_layer(self):
         """Initialize the delay (DCLS) layer based on delay type."""
         if self.delay_type == 'axonal':
-            if self.is_first_layer:
-                # First layer: delay on input features (input_size -> input_size)
-                if getattr(self.config, 'sparsity_p_delay', 0) > 0:
-                    self.delay_layer = DelayedMaskedDcls1d(
-                        self.input_size,
-                        self.input_size,
-                        kernel_count=1,
-                        groups=self.input_size,
-                        version='gauss',
-                        bias=self.config.bias,
-                        total_epochs=self.config.epochs,
-                        dilated_kernel_size=self.config.max_delay,
-                        final_sparsity=self.config.sparsity_p_delay,
-                        learned_mask=getattr(self.config, 'learned_mask', False)
-                    )
-                else:
-                    self.delay_layer = Dcls1d(
-                        self.input_size,
-                        self.input_size,
-                        kernel_count=1,
-                        groups=self.input_size,
-                        version='gauss',
-                        bias=self.config.bias,
-                        dilated_kernel_size=self.config.max_delay
-                    )
-                self.delay_layer.weight.requires_grad = False
-                self.delay_layer.weight.fill_(1.)
-            elif self.is_output_layer:
-                # Output layer: delay on input features (input_size -> input_size)
-                # For axonal delays, delay is applied before the linear layer
-                # So it operates on the input features (hidden_size from previous layer)
+            if getattr(self.config, 'sparsity_p_delay', 0) > 0:
+                self.delay_layer = DelayedMaskedDcls1d(
+                    self.input_size,
+                    self.input_size,
+                    kernel_count=1,
+                    groups=self.input_size,
+                    version='gauss',
+                    bias=self.config.bias,
+                    total_epochs=self.config.epochs,
+                    dilated_kernel_size=self.config.max_delay,
+                    final_sparsity=self.config.sparsity_p_delay,
+                    learned_mask=getattr(self.config, 'learned_mask', False)
+                )
+            else:
                 self.delay_layer = Dcls1d(
                     self.input_size,
                     self.input_size,
@@ -430,37 +392,9 @@ class DelayLayer(nn.Module):
                     bias=self.config.bias,
                     dilated_kernel_size=self.config.max_delay
                 )
-                self.delay_layer.weight.requires_grad = False
-                self.delay_layer.weight.fill_(1.)
-            else:
-                # Hidden layers
-                if getattr(self.config, 'sparsity_p_delay', 0) > 0:
-                    self.delay_layer = DelayedMaskedDcls1d(
-                        self.hidden_size,
-                        self.hidden_size,
-                        kernel_count=1,
-                        groups=self.hidden_size,
-                        version='gauss',
-                        bias=self.config.bias,
-                        total_epochs=self.config.epochs,
-                        dilated_kernel_size=self.config.max_delay,
-                        final_sparsity=self.config.sparsity_p_delay,
-                        learned_mask=getattr(self.config, 'learned_mask', False)
-                    )
-                else:
-                    self.delay_layer = Dcls1d(
-                        self.hidden_size,
-                        self.hidden_size,
-                        kernel_count=1,
-                        groups=self.hidden_size,
-                        version='gauss',
-                        bias=self.config.bias,
-                        dilated_kernel_size=self.config.max_delay
-                    )
-                self.delay_layer.weight.requires_grad = False
-                self.delay_layer.weight.fill_(1.)
+            self.delay_layer.weight.requires_grad = False
+            self.delay_layer.weight.fill_(1.)
         elif self.delay_type == 'dendritic':
-            if self.is_output_layer:
                 self.delay_layer = Dcls1d(
                     self.hidden_size,
                     self.hidden_size,
@@ -472,30 +406,7 @@ class DelayLayer(nn.Module):
                 )
                 self.delay_layer.weight.requires_grad = False
                 self.delay_layer.weight.fill_(1.)
-            else:
-                self.delay_layer = Dcls1d(
-                    self.hidden_size if not self.is_first_layer else self.input_size,
-                    self.hidden_size,
-                    kernel_count=1,
-                    version='gauss',
-                    bias=self.config.bias,
-                    groups=self.hidden_size if not self.is_first_layer else 1,
-                    dilated_kernel_size=self.config.max_delay
-                )
-                self.delay_layer.weight.requires_grad = False
-                self.delay_layer.weight.fill_(1.)
-        else:  # synaptic
-            if self.is_first_layer:
-                self.delay_layer = Dcls1d(
-                    self.input_size,
-                    self.hidden_size,
-                    kernel_count=self.config.kernel_count,
-                    groups=1,
-                    dilated_kernel_size=self.config.max_delay,
-                    bias=self.config.bias,
-                    version=self.config.DCLSversion
-                )
-            else:
+        else:
                 # For output layer, input_size is the previous layer's output (hidden_size from previous layer)
                 # For hidden layers, both input and output are hidden_size
                 input_channels = self.input_size if self.is_output_layer else self.hidden_size
@@ -519,38 +430,23 @@ class DelayLayer(nn.Module):
         """
         # Apply delay processing based on delay_type
         if self.delay_type == 'dendritic':
-            # Pad time dimension
             x = F.pad(x, (0, 0, 0, 0, self.config.left_padding, self.config.right_padding), 'constant', 0)
-            # Linear transformation
-            if self.is_first_layer:
-                x = self.W(x)
-            elif not self.is_output_layer:
-                x = self.Wh(x)
-            elif self.is_output_layer and self.Wf is not None:
-                x = self.Wf(x)
+            x = self.W(x)
             # Permute for DCLS: (time, batch, features) -> (batch, features, time)
             x = x.permute(1, 2, 0)
-            # Delay layer
             x = self.delay_layer(x)
             # Permute back: (batch, features, time) -> (time, batch, features)
             x = x.permute(2, 0, 1)
         else:  # axonal or synaptic
             # Permute for DCLS: (time, batch, features) -> (batch, features, time)
             x = x.permute(1, 2, 0)
-            # Pad time dimension
             x = F.pad(x, (self.config.left_padding, self.config.right_padding), 'constant', 0)
-            # Delay layer
             x = self.delay_layer(x)
             # Permute back: (batch, features, time) -> (time, batch, features)
             x = x.permute(2, 0, 1)
             # Linear transformation for axonal (after delay)
             if self.delay_type == 'axonal':
-                if self.is_first_layer:
-                    x = self.W(x)
-                elif not self.is_output_layer:
-                    x = self.Wh(x)
-                elif self.is_output_layer and self.Wf is not None:
-                    x = self.Wf(x)
+                x = self.W(x)
         
         # Batch normalization (only for hidden layers)
         if self.normalize:
