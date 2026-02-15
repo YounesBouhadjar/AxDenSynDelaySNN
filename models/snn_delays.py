@@ -50,9 +50,6 @@ class SnnDelays(Model):
                 input_size=input_size,
                 hidden_size=self.config.n_hidden_neurons,
                 config=self.config,
-                is_first_layer=True,
-                is_output_layer=False,
-                layer_idx=0
             )
         )
         input_size = self.config.n_hidden_neurons
@@ -64,9 +61,6 @@ class SnnDelays(Model):
                     input_size=input_size,
                     hidden_size=self.config.n_hidden_neurons,
                     config=self.config,
-                    is_first_layer=False,
-                    is_output_layer=False,
-                    layer_idx=i + 1
                 )
             )
         
@@ -76,9 +70,7 @@ class SnnDelays(Model):
                 input_size=input_size,
                 hidden_size=self.config.n_outputs,
                 config=self.config,
-                is_first_layer=False,
                 is_output_layer=True,
-                layer_idx=self.config.n_hidden_layers
             )
         )
         
