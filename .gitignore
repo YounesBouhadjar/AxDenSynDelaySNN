@@ -10,7 +10,6 @@ __pycache__/
 *.pdf
 
 Test_On_FPGA
-generate_sweep_id.py
 miscellaneous
 
 *.sh
