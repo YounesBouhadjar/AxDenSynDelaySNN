@@ -97,7 +97,7 @@ Hyperparameter sweep configuration files are located in the `wb_configs/` direct
 
 First, log in to W&B and execute:
 ```bash
-python generate_sweep_id.py wb_configs/various_gsc_all.yaml
+python generate_sweep_id.py wb_configs/various_delays_gsc_all.yaml
 ```
 
 The output will include a **Sweep ID** (e.g., `username/project/sweep_id`). Use this ID in the next step.
