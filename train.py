@@ -478,19 +478,19 @@ class Model(nn.Module):
                 best_metric_val = metric_valid
                 best_avg_spikes_val = avg_spikes_valid
                 best_ops_val = ops_valid
-            
+
+                # TODO: Rethink naming. `best_metric_test` is misleading; it suggests the best test score across models.
+                if  metric_test > best_metric_test:#  and (self.config.model_type != 'snn_delays' or epoch >= self.config.final_epoch - 1):
+                    best_metric_test = metric_test
+                    best_avg_spikes_test = avg_spikes_test
+                    best_ops_test = ops_test
+ 
             if  loss_valid < best_loss_val:#  and (self.config.model_type != 'snn_delays' or epoch >= self.config.final_epoch - 1):
                 print("# Saving best Loss model...")
                 model_path = os.path.join(self.config.save_model_path, 'best_loss.pt')
                 torch.save(self.state_dict(), model_path)
                 best_loss_val = loss_valid
             
-            if  metric_test > best_metric_test:#  and (self.config.model_type != 'snn_delays' or epoch >= self.config.final_epoch - 1):
-                best_metric_test = metric_test
-                best_avg_spikes_test = avg_spikes_test
-                best_ops_test = ops_test
-
-
             ########################## Logging and Plotting  ##########################
 
             print(f"=====> Epoch {epoch} : \nLoss Train = {loss_epochs['train'][-1]:.3f}  |  Acc Train = {100*metric_epochs['train'][-1]:.2f}% | Firing Rates Train = {firing_rates_epochs['train'][-1]:.3f}")
