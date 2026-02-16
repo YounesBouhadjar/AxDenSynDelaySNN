@@ -2,13 +2,9 @@
 # Copyright (c) 2026-present
 """
 Layer classes for SNN models with delays.
-
-This code is modified from:
-https://github.com/Thvnvtos/SNN-delays
-
-Layer classes for SNN models, following the SiLIFLayer structure pattern.
 Each layer is a complete, self-contained nn.Module.
 """
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -395,31 +391,33 @@ class DelayLayer(nn.Module):
             self.delay_layer.weight.requires_grad = False
             self.delay_layer.weight.fill_(1.)
         elif self.delay_type == 'dendritic':
-                self.delay_layer = Dcls1d(
-                    self.hidden_size,
-                    self.hidden_size,
-                    kernel_count=1,
-                    version='gauss',
-                    bias=self.config.bias,
-                    groups=self.hidden_size,
-                    dilated_kernel_size=self.config.max_delay
-                )
-                self.delay_layer.weight.requires_grad = False
-                self.delay_layer.weight.fill_(1.)
+            assert getattr(self.config, 'sparsity_p_delay', 0) == 0, "delay sparsity is not supported yet for dendritic delay"
+            self.delay_layer = Dcls1d(
+                self.hidden_size,
+                self.hidden_size,
+                kernel_count=1,
+                version='gauss',
+                bias=self.config.bias,
+                groups=self.hidden_size,
+                dilated_kernel_size=self.config.max_delay
+            )
+            self.delay_layer.weight.requires_grad = False
+            self.delay_layer.weight.fill_(1.)
         else:
-                # For output layer, input_size is the previous layer's output (hidden_size from previous layer)
-                # For hidden layers, both input and output are hidden_size
-                input_channels = self.input_size if self.is_output_layer else self.hidden_size
-                output_channels = self.hidden_size if not self.is_output_layer else self.config.n_outputs
-                self.delay_layer = Dcls1d(
-                    input_channels,
-                    output_channels,
-                    kernel_count=self.config.kernel_count,
-                    groups=1,
-                    dilated_kernel_size=self.config.max_delay,
-                    bias=self.config.bias,
-                    version=self.config.DCLSversion
-                )
+            assert getattr(self.config, 'sparsity_p_delay', 0) == 0, "delay sparsity is not supported yet for synaptic delay"
+            # For output layer, input_size is the previous layer's output (hidden_size from previous layer)
+            # For hidden layers, both input and output are hidden_size
+            input_channels = self.input_size if self.is_output_layer else self.hidden_size
+            output_channels = self.hidden_size if not self.is_output_layer else self.config.n_outputs
+            self.delay_layer = Dcls1d(
+                input_channels,
+                output_channels,
+                kernel_count=self.config.kernel_count,
+                groups=1,
+                dilated_kernel_size=self.config.max_delay,
+                bias=self.config.bias,
+                version=self.config.DCLSversion
+            )
     
     def forward(self, x):
         """

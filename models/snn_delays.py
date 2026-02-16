@@ -5,10 +5,8 @@ Spiking Neural Network with learnable delays (axonal, dendritic, synaptic).
 
 This code is modified from:
 https://github.com/Thvnvtos/SNN-delays
-
-Refactored SnnDelays using layer-based structure similar to SiLIFLayer.
-Follows the pattern from SSM-inspired-LIF repo.
 """
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -90,23 +88,7 @@ class SnnDelays(Model):
                         mask = (torch.rand(layer.W.weight.size()) > self.config.sparsity_p).float()
                         layer.W.weight *= mask
                         self.mask.append(mask)
-            
-            if hasattr(layer, 'Wh'):
-                torch.nn.init.kaiming_uniform_(layer.Wh.weight, nonlinearity='relu')
-                if self.config.sparsity_p > 0:
-                    with torch.no_grad():
-                        mask = (torch.rand(layer.Wh.weight.size()) > self.config.sparsity_p).float()
-                        layer.Wh.weight *= mask
-                        self.mask.append(mask)
-            
-            if hasattr(layer, 'Wf'):
-                torch.nn.init.kaiming_uniform_(layer.Wf.weight, nonlinearity='relu')
-                if self.config.sparsity_p > 0:
-                    with torch.no_grad():
-                        mask = (torch.rand(layer.Wf.weight.size()) > self.config.sparsity_p).float()
-                        layer.Wf.weight *= mask
-                        self.mask.append(mask)
-        
+             
         # Initialize delay layers (DCLS) for synaptic delays
         if self.config.init_w_method == 'kaiming_uniform' and self.config.delay_type == 'synaptic':
             for layer in self.snn:
@@ -152,10 +134,6 @@ class SnnDelays(Model):
             # Linear layer weights for axonal/dendritic delays
             if hasattr(layer, 'W'):
                 self.weights.append(layer.W.weight)
-            if hasattr(layer, 'Wh'):
-                self.weights.append(layer.Wh.weight)
-            if hasattr(layer, 'Wf'):
-                self.weights.append(layer.Wf.weight)
             
             # BatchNorm weights
             if hasattr(layer, 'norm') and layer.normalize:
@@ -200,23 +178,7 @@ class SnnDelays(Model):
                         self.mask[k] = self.mask[k].to(layer.W.weight.device)
                         layer.W.weight *= self.mask[k]
                         k += 1
-            
-            if hasattr(layer, 'Wh'):
-                functional.reset_net(layer.Wh)
-                if self.config.sparsity_p > 0 and k < len(self.mask):
-                    with torch.no_grad():
-                        self.mask[k] = self.mask[k].to(layer.Wh.weight.device)
-                        layer.Wh.weight *= self.mask[k]
-                        k += 1
-            
-            if hasattr(layer, 'Wf'):
-                functional.reset_net(layer.Wf)
-                if self.config.sparsity_p > 0 and k < len(self.mask):
-                    with torch.no_grad():
-                        self.mask[k] = self.mask[k].to(layer.Wf.weight.device)
-                        layer.Wf.weight *= self.mask[k]
-                        k += 1
-        
+
         # Reset delay layers and apply sparsity masks
         if self.config.sparsity_p > 0 and self.config.delay_type == 'synaptic':
             for layer in self.snn:
