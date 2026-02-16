@@ -405,13 +405,9 @@ class DelayLayer(nn.Module):
             self.delay_layer.weight.fill_(1.)
         else:
             assert getattr(self.config, 'sparsity_p_delay', 0) == 0, "delay sparsity is not supported yet for synaptic delay"
-            # For output layer, input_size is the previous layer's output (hidden_size from previous layer)
-            # For hidden layers, both input and output are hidden_size
-            input_channels = self.input_size if self.is_output_layer else self.hidden_size
-            output_channels = self.hidden_size if not self.is_output_layer else self.config.n_outputs
             self.delay_layer = Dcls1d(
-                input_channels,
-                output_channels,
+                self.input_size,
+                self.hidden_size,
                 kernel_count=self.config.kernel_count,
                 groups=1,
                 dilated_kernel_size=self.config.max_delay,
