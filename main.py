@@ -67,14 +67,6 @@ parser.add_argument('--use_regularizers', type=str2bool, default=None, help='Use
 #parser.add_argument('--time_step', type=int, default=None, help='Time step')
 args = parser.parse_args()
 
-
-# Load config from YAML
-if args.config is None:
-    if args.dataset is None:
-        config_path = 'config'
-    else:
-        config_path = f'configs.{args.dataset}'
-
 try:
     config = load_config(args.config)
 except Exception as e:
@@ -100,16 +92,22 @@ for arg_key, arg_value in vars(args).items():
             setattr(config, 'max_lr_pos', 5 * arg_value)
         if arg_key == 'alpha':
             from spikingjelly.activation_based import surrogate
-            setattr(config, 'surrogate_function', surrogate.ATanThreshold(alpha = arg_value, beta=config.beta))
+            setattr(config, 'surrogate_function', surrogate.ATanThreshold(alpha = arg_value,
+                                                                          beta=config.beta))
         if arg_key == 'beta':
             from spikingjelly.activation_based import surrogate
-            setattr(config, 'surrogate_function', surrogate.ATanThreshold(alpha=config.alpha, beta = arg_value))
+            setattr(config, 'surrogate_function', surrogate.ATanThreshold(alpha=config.alpha,
+                                                                          beta = arg_value))
         if arg_key == 'x_min':
             from spikingjelly.activation_based import surrogate
-            setattr(config, 'surrogate_function', surrogate.BoxcarThreshold(threshold = config.v_threshold, x_min = arg_value, x_max = config.x_max))
+            setattr(config, 'surrogate_function', surrogate.BoxcarThreshold(threshold = config.v_threshold,
+                                                                            x_min = arg_value,
+                                                                            x_max = config.x_max))
         if arg_key == 'x_max':
             from spikingjelly.activation_based import surrogate
-            setattr(config, 'surrogate_function', surrogate.BoxcarThreshold(threshold = config.v_threshold, x_min = config.x_min, x_max = arg_value)) 
+            setattr(config, 'surrogate_function', surrogate.BoxcarThreshold(threshold = config.v_threshold,
+                                                                            x_min = config.x_min,
+                                                                            x_max = arg_value)) 
         if arg_key == 'epochs':
             arg_value = int(arg_value)
             final_epoch = (1*arg_value)//4
@@ -170,13 +168,14 @@ print(model)
 print(f"===> Dataset    = {config.dataset}")
 print(f"===> Model type = {config.model_type}")
 
+#TODO: these are roughly estimated, need to be improved
 if getattr(config, 'sparsity_p_delay', 0) > 0:
     print(f"===> Sparsity level for delay weights = {getattr(config, 'sparsity_p_delay', 0)}")
     print(f"===> Effective number of parameters = {utils.count_params_with_sparsity(model, config.sparsity_p_delay)}")
     wandb.log({"model_size": utils.count_params_with_sparsity(model, config.sparsity_p_delay)})
-elif getattr(config, 'sparsity_p', 0) > 0:
+if getattr(config, 'sparsity_p', 0) > 0:
     print(f"===> Sparsity level for weights = {getattr(config, 'sparsity_p', 0)}")
-    print(f"===> Effective number of parameters = {utils.count_parameters(model)* (1 - config.sparsity_p)}") #TODO just roughly estimate
+    print(f"===> Effective number of parameters = {utils.count_parameters(model)* (1 - config.sparsity_p)}")
     wandb.log({"model_size": utils.count_parameters(model)* (1 - config.sparsity_p)})
 else:
     print(f"===> Model size = {utils.count_parameters(model)}")
