@@ -138,35 +138,28 @@ class Config:
             self.surrogate_function_output = surrogate.ATan(alpha=self.alpha)
         
         # init_tau (convert from ms to time steps)
-        # If init_tau_ms is provided, use it; otherwise use init_tau if it's a raw value
-        if hasattr(self, 'init_tau_ms'):
-            init_tau_raw = self.init_tau_ms
-        elif hasattr(self, 'init_tau') and isinstance(self.init_tau, (int, float)) and self.init_tau > 1:
-            # If init_tau is a large number (> 1), assume it's in ms
+        if hasattr(self, 'init_tau') and isinstance(self.init_tau, (int, float)) and self.init_tau > 1:
             init_tau_raw = self.init_tau
         else:
-            init_tau_raw = 15.0  # Default
+            raise ValueError("init_tau either not provided or must be a number greater than 1")
         
         self.init_tau = (init_tau_raw + 1e-9) / self.time_step
         
         # stateful_synapse_tau (convert from ms to time steps)
-        if hasattr(self, 'stateful_synapse_tau_ms'):
-            stateful_synapse_tau_raw = self.stateful_synapse_tau_ms
-        elif hasattr(self, 'stateful_synapse_tau') and isinstance(self.stateful_synapse_tau, (int, float)) and self.stateful_synapse_tau > 1:
-            # If stateful_synapse_tau is a large number (> 1), assume it's in ms
+        if hasattr(self, 'stateful_synapse_tau') and isinstance(self.stateful_synapse_tau, (int, float)) and self.stateful_synapse_tau > 1:
             stateful_synapse_tau_raw = self.stateful_synapse_tau
         else:
-            stateful_synapse_tau_raw = 10.0  # Default
+            raise ValueError("stateful_synapse_tau either not provided or must be a number greater than 1")
         
         self.stateful_synapse_tau = (stateful_synapse_tau_raw + 1e-9) / self.time_step
         
         # max_delay
-        if not hasattr(self, 'max_delay') or self.max_delay is None:
-            if hasattr(self, 'max_delay_ms'):
-                self.max_delay = self.max_delay_ms // self.time_step
-            else:
-                # Default calculation
-                self.max_delay = 300 // self.time_step
+        if hasattr(self, 'max_delay_ms'):
+            self.max_delay = self.max_delay_ms // self.time_step
+        else:
+            raise ValueError("max_delay_ms is not provided")
+
+        self.max_delay = self.max_delay // self.time_step
         
         # Ensure max_delay is odd
         if self.max_delay % 2 == 0:

@@ -71,9 +71,6 @@ spiking_neuron_output_type:
 init_tau:
     values:
         - 15
-init_tau_ms:
-    values:
-        - 15
 stateful_synapse:
     values:
         - false
@@ -81,9 +78,6 @@ stateful_synapse_learnable:
     values:
         - false
 stateful_synapse_tau:
-    values:
-        - 10.0
-stateful_synapse_tau_ms:
     values:
         - 10.0
 
