@@ -564,8 +564,10 @@ class Model(nn.Module):
             wandb.run.finish()
 
     def eval_model(self, loader, device):
+        #return 0, 0, 0, 0, 0, 0, 0, 0
         # Save model state in memory (not to file)
-        saved_state = self.state_dict()
+        #saved_state = self.state_dict()
+        torch.save(self.state_dict(), eventid + '.pt')
         self.eval()
         with torch.no_grad():
 
@@ -693,6 +695,11 @@ class Model(nn.Module):
                     wandb.log(weight_logs)
             
             # Restore original model state from memory
-            self.load_state_dict(saved_state, strict=True)
+            #self.load_state_dict(saved_state, strict=True)
+            self.load_state_dict(torch.load(eventid + '.pt'), strict=True)
+            if os.path.exists(eventid + '.pt'):
+                os.remove(eventid + '.pt')
+            else:
+                print(f"File '{eventid + '.pt'}' does not exist.")
 
         return np.mean(loss_batch), np.mean(metric_batch), np.mean(avg_spikes_batch), np.mean(ops_batch), np.mean(firing_rates_batch), np.mean(fused_bias_penalty_batch), np.mean(voltage_reg_batch), np.mean(max_population_frs_batch)
