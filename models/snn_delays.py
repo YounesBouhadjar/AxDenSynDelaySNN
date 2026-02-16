@@ -244,7 +244,7 @@ class SnnDelays(Model):
         for i, snn_lay in enumerate(self.snn):
             # Track presynaptic spikes for ops calculation
             nb_presynaptic_spikes = (x != 0).sum(dim=(0, 2), dtype=float).mean()
-            
+
             # Track max population firing rates
             if self.config.model_type == 'snn_delays':
                 window_avg = (x > 0.0).to(x.dtype).unfold(0, self.config.max_delay, 1).mean(dim=(-1, -2))

@@ -73,13 +73,14 @@ def set_seed(seed):
 class Config:
     """Config class that loads from YAML and computes derived values."""
     
-    def __init__(self, yaml_path=None, config_dict=None):
+    def __init__(self, yaml_path=None, config_dict=None, args=None):
         """
         Initialize config from YAML file or dictionary.
         
         Args:
             yaml_path: Path to YAML config file
             config_dict: Dictionary of config values (alternative to yaml_path)
+            args: Command-line arguments
         """
         if yaml_path:
             with open(yaml_path, 'r') as f:
@@ -97,7 +98,13 @@ class Config:
                     setattr(self, key, None)
             else:
                 setattr(self, key, value)
-        
+
+        # Overwrite config parameters with command-line arguments if provided
+        if args:
+            for arg_key, arg_value in vars(args).items():
+                if arg_value is not None and hasattr(self, arg_key):
+                    setattr(self, arg_key, arg_value)
+
         # Compute derived values
         self._compute_derived_values()
     
@@ -154,12 +161,13 @@ class Config:
         self.stateful_synapse_tau = (stateful_synapse_tau_raw + 1e-9) / self.time_step
         
         # max_delay
-        if hasattr(self, 'max_delay_ms'):
+        if hasattr(self, 'max_delay'):
+            self.max_delay = self.max_delay
+            self.max_delay_ms = self.max_delay * self.time_step
+        elif hasattr(self, 'max_delay_ms'):
             self.max_delay = self.max_delay_ms // self.time_step
         else:
             raise ValueError("max_delay_ms is not provided")
-
-        self.max_delay = self.max_delay // self.time_step
         
         # Ensure max_delay is odd
         if self.max_delay % 2 == 0:
@@ -236,9 +244,19 @@ class Config:
         # Default wandb_project_name if not provided
         if not hasattr(self, 'wandb_project_name') or self.wandb_project_name is None:
             self.wandb_project_name = 'SNNDelays'
+    
+    def save(self, filepath):
+        """Save config object (class instance) as a NumPy .npy file."""
+        # Convert config class instance to dict, including both instance and class attributes
+        # First get class attributes (defaults defined at class level)
+        config_dict = {k: v for k, v in self.__class__.__dict__.items() if not k.startswith('__') and not callable(v)}
+        # Then update with instance attributes (those set/modified on the instance, which override class defaults)
+        config_dict.update({k: v for k, v in vars(self).items() if not k.startswith('__') and not callable(v)})
+        
+        np.save(filepath, config_dict, allow_pickle=True)
 
 
-def load_config(config_path):
+def load_config(config_path, args=None):
     """
     Load config from YAML file or Python module.
     
@@ -251,7 +269,7 @@ def load_config(config_path):
     # Check if it's a YAML file
     if config_path.endswith('.yaml') or config_path.endswith('.yml'):
         if os.path.exists(config_path):
-            return Config(yaml_path=config_path)
+            return Config(yaml_path=config_path, args=args)
         else:
             raise FileNotFoundError(f"Config file not found: {config_path}")
     
@@ -260,12 +278,12 @@ def load_config(config_path):
         config_name = config_path.replace('configs.', '')
         yaml_path = os.path.join('configs', f'{config_name}.yaml')
         if os.path.exists(yaml_path):
-            return Config(yaml_path=yaml_path)
+            return Config(yaml_path=yaml_path, args=args)
     
     # Check if it's a direct path to a YAML file
     if '/' in config_path and (config_path.endswith('.yaml') or config_path.endswith('.yml')):
         if os.path.exists(config_path):
-            return Config(yaml_path=config_path)
+            return Config(yaml_path=config_path, args=args)
     
     # Fallback to Python module import (for backward compatibility with config.py)
     import importlib

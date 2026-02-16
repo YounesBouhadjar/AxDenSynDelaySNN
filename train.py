@@ -570,16 +570,15 @@ class Model(nn.Module):
         with torch.no_grad():
 
             if self.config.model_type != 'snn':
-                if hasattr(self, 'snn'):
-                    for i, layer in enumerate(self.snn):
-                        delay_layer = self._get_delay_layer(i)
-                        if delay_layer is not None:
-                            if hasattr(delay_layer, 'SIG'):
-                                delay_layer.SIG *= 0
-                            if hasattr(delay_layer, 'version'):
-                                delay_layer.version = 'max'
-                            if hasattr(delay_layer, 'DCK') and hasattr(delay_layer.DCK, 'version'):
-                                delay_layer.DCK.version = 'max'
+                for i, layer in enumerate(self.snn):
+                    delay_layer = self._get_delay_layer(i)
+                    if delay_layer is not None:
+                        if hasattr(delay_layer, 'SIG'):
+                            delay_layer.SIG *= 0
+                        if hasattr(delay_layer, 'version'):
+                            delay_layer.version = 'max'
+                        if hasattr(delay_layer, 'DCK') and hasattr(delay_layer.DCK, 'version'):
+                            delay_layer.DCK.version = 'max'
 
                 if hasattr(self, 'round_pos'):
                     self.round_pos()
@@ -588,30 +587,17 @@ class Model(nn.Module):
             if self.config.use_batchnorm and getattr(self.config, 'conv_bn_penalty', False):
                 delay_type = getattr(self.config, 'delay_type', 'synaptic')
                 
-                if delay_type == 'synaptic':
-                    if hasattr(self, 'snn'):
-                        for i, layer in enumerate(self.snn):
-                            delay_layer = self._get_delay_layer(i)
-                            bn_layer = self._get_batchnorm_layer(i)
-                            if delay_layer is not None and bn_layer is not None and bn_layer.bias is not None:
-                                fb = self.fused_bias(delay_layer, bn_layer)
-                                bn_layer.bias.sub_(torch.relu(fb) + 1e-3)  # push all b' ≤ -margin
+                if delay_type == 'axonal' or delay_type == 'dendritic':
+                    for i, layer in enumerate(self.snn):
+                        if i == len(self.snn) - 1:  # Skip output layer
+                            continue
+                        bn_layer = self._get_batchnorm_layer(i)
+                        if bn_layer is not None and bn_layer.bias is not None:
+                            fb = self.fused_bias(layer.W, bn_layer)
+                            bn_layer.bias.sub_(torch.relu(fb) + 1e-3)  # push all b' ≤ -margin
                 else:
-                    # Axonal/dendritic delays
-                    if hasattr(self, 'snn'):
-                        for i, layer in enumerate(self.snn):
-                            if i == len(self.snn) - 1:  # Skip output layer
-                                continue
-                            bn_layer = self._get_batchnorm_layer(i)
-                            if bn_layer is not None and bn_layer.bias is not None:
-                                if i == 0 and hasattr(layer, 'W'):
-                                    conv = layer.W
-                                elif hasattr(layer, 'Wh'):
-                                    conv = layer.Wh
-                                else:
-                                    continue
-                                fb = self.fused_bias(conv, bn_layer)
-                                bn_layer.bias.sub_(torch.relu(fb) + 1e-3)  # push all b' ≤ -margin
+                    raise ValueError(f"Delay type: {delay_type} not supported for BN bias adjustment")
+
 
             loss_batch, metric_batch, avg_spikes_batch, ops_batch, firing_rates_batch, fused_bias_penalty_batch, voltage_reg_batch, max_population_frs_batch = [], [], [], [], [], [], [], []
             for i, (x, y, _) in enumerate(tqdm(loader)):
@@ -633,29 +619,21 @@ class Model(nn.Module):
                     penalty_weight = getattr(self.config, 'bn_penalty_weight', 1e-3)
                     delay_type = getattr(self.config, 'delay_type', 'synaptic')
                     
-                    if delay_type == 'synaptic':
-                        if hasattr(self, 'snn'):
-                            for i, layer in enumerate(self.snn):
-                                if i == len(self.snn) - 1:  # Skip output layer
-                                    continue
-                                delay_layer = self._get_delay_layer(i)
-                                bn_layer = self._get_batchnorm_layer(i)
-                                if delay_layer is not None and bn_layer is not None:
-                                    penalty = self.negative_fused_bias_penalty(delay_layer, bn_layer, weight=penalty_weight)
+                    if delay_type == 'axonal' or delay_type == 'dendritic':
+
+                        for i, layer in enumerate(self.snn):
+                            if i == len(self.snn) - 1:  # Skip output layer
+                                continue
+                            bn_layer = self._get_batchnorm_layer(i)
+                            if bn_layer is not None:
+                                if i == 0 and hasattr(layer, 'W'):
+                                    penalty = self.negative_fused_bias_penalty(layer.W, bn_layer, weight=penalty_weight)
+                                    batch_penalty += penalty.detach().cpu().item()
+                                elif hasattr(layer, 'Wh'):
+                                    penalty = self.negative_fused_bias_penalty(layer.Wh, bn_layer, weight=penalty_weight)
                                     batch_penalty += penalty.detach().cpu().item()
                     else:
-                        if hasattr(self, 'snn'):
-                            for i, layer in enumerate(self.snn):
-                                if i == len(self.snn) - 1:  # Skip output layer
-                                    continue
-                                bn_layer = self._get_batchnorm_layer(i)
-                                if bn_layer is not None:
-                                    if i == 0 and hasattr(layer, 'W'):
-                                        penalty = self.negative_fused_bias_penalty(layer.W, bn_layer, weight=penalty_weight)
-                                        batch_penalty += penalty.detach().cpu().item()
-                                    elif hasattr(layer, 'Wh'):
-                                        penalty = self.negative_fused_bias_penalty(layer.Wh, bn_layer, weight=penalty_weight)
-                                        batch_penalty += penalty.detach().cpu().item()
+                        raise ValueError(f"Delay type: {delay_type} not supported for BN bias adjustment")
 
                 avg_spikes_batch.append(avg_spikes.sum())
                 ops_batch.append(ops.sum())
@@ -669,14 +647,13 @@ class Model(nn.Module):
                 self.reset_model(train=False)
 
             if self.config.DCLSversion == 'gauss' and self.config.model_type != 'snn':
-                if hasattr(self, 'snn'):
-                    for i, layer in enumerate(self.snn):
-                        delay_layer = self._get_delay_layer(i)
-                        if delay_layer is not None:
-                            if hasattr(delay_layer, 'version'):
-                                delay_layer.version = 'gauss'
-                            if hasattr(delay_layer, 'DCK') and hasattr(delay_layer.DCK, 'version'):
-                                delay_layer.DCK.version = 'gauss'
+                for i, layer in enumerate(self.snn):
+                    delay_layer = self._get_delay_layer(i)
+                    if delay_layer is not None:
+                        if hasattr(delay_layer, 'version'):
+                            delay_layer.version = 'gauss'
+                        if hasattr(delay_layer, 'DCK') and hasattr(delay_layer.DCK, 'version'):
+                            delay_layer.DCK.version = 'gauss'
 
             # Log weights per synaptic delay type (distributions)
             delay_type = getattr(self.config, 'delay_type', 'synaptic')
@@ -695,7 +672,7 @@ class Model(nn.Module):
 
                 # Log weights of first layer
                 if delay_type == 'synaptic':
-                    if hasattr(self, 'snn') and len(self.snn) > 0:
+                    if len(self.snn) > 0:
                         delay_layer = self._get_delay_layer(0)
                         if delay_layer is not None and hasattr(delay_layer, 'weight'):
                             w = delay_layer.weight

@@ -60,7 +60,7 @@ parser.add_argument('--x_min', type=float, default=None, help='X min parameter f
 parser.add_argument('--x_max', type=float, default=None, help='X max parameter for surrogate function')
 parser.add_argument('--sparsity_p', type=float, default=None, help='Sparsity parameter for weights')
 parser.add_argument('--sparsity_p_delay', type=float, default=None, help='Sparsity parameter for delay weights')
-parser.add_argument('--epochs', type=float, default=None, help='Number of epochs')
+parser.add_argument('--epochs', type=int, default=None, help='Number of epochs')
 parser.add_argument('--scheduler_w', type=str, default=None, help='Scheduler for weights')
 parser.add_argument('--scheduler_pos', type=str, default=None, help='Scheduler for positions')
 parser.add_argument('--use_regularizers', type=str2bool, default=None, help='Use regularizers')
@@ -68,59 +68,13 @@ parser.add_argument('--use_regularizers', type=str2bool, default=None, help='Use
 args = parser.parse_args()
 
 try:
-    config = load_config(args.config)
+    config = load_config(args.config, args)
 except Exception as e:
     raise Exception(f'Failed to load config from {args.config}: {e}')
 
-# Overwrite config parameters with command-line arguments if provided
-# Overwrite any config attrite if provided as a command-line argument
-#TODO: the following is not necessary if the args are copied before calling load_config
-for arg_key, arg_value in vars(args).items():
-    if arg_value is not None and hasattr(config, arg_key):
-        if arg_key == 'max_delay':
-            arg_value = arg_value if arg_value%2==1 else arg_value+1
-            setattr(config, 'sigInit', arg_value // 2)
-            setattr(config, 'left_padding', arg_value-1)
-            setattr(config, 'right_padding', (arg_value-1) // 2)
-            setattr(config, 'init_pos_a', -arg_value//2)
-            setattr(config, 'init_pos_b', arg_value//2)
-        if arg_key == 'init_tau':
-            arg_value = (arg_value  +  1e-9) / config.time_step
-        if arg_key == 'lr_w':
-            setattr(config, 'max_lr_w', 5 * arg_value)
-        if arg_key == 'lr_pos':
-            setattr(config, 'max_lr_pos', 5 * arg_value)
-        if arg_key == 'alpha':
-            from spikingjelly.activation_based import surrogate
-            setattr(config, 'surrogate_function', surrogate.ATanThreshold(alpha = arg_value,
-                                                                          beta=config.beta))
-        if arg_key == 'beta':
-            from spikingjelly.activation_based import surrogate
-            setattr(config, 'surrogate_function', surrogate.ATanThreshold(alpha=config.alpha,
-                                                                          beta = arg_value))
-        if arg_key == 'x_min':
-            from spikingjelly.activation_based import surrogate
-            setattr(config, 'surrogate_function', surrogate.BoxcarThreshold(threshold = config.v_threshold,
-                                                                            x_min = arg_value,
-                                                                            x_max = config.x_max))
-        if arg_key == 'x_max':
-            from spikingjelly.activation_based import surrogate
-            setattr(config, 'surrogate_function', surrogate.BoxcarThreshold(threshold = config.v_threshold,
-                                                                            x_min = config.x_min,
-                                                                            x_max = arg_value)) 
-        if arg_key == 'epochs':
-            arg_value = int(arg_value)
-            final_epoch = (1*arg_value)//4
-            setattr(config, 'final_epoch', final_epoch)
-            setattr(config, 't_max_w', arg_value)
-            setattr(config, 't_max_pos', arg_value)
-
-        setattr(config, arg_key, arg_value)
-
 if config.use_wandb:
-    # Get all config attributes (class defaults + instance overrides) for wandb
-    cfg = {k: v for k, v in config.__class__.__dict__.items() if not k.startswith('__') and not callable(v)}
-    cfg.update({k: v for k, v in vars(config).items() if not k.startswith('__')})
+    # Get all config attributes for wandb
+    cfg = {k: v for k, v in vars(config).items() if not k.startswith('__') and not callable(v)}
 
     experiment_name = f'_seed_{config.seed}_{config.delay_type}_{config.dataset}_{config.time_step}ms_n_hidden_layers_{config.n_hidden_layers}_n_hidden_neurons_{config.n_hidden_neurons}'
     run_name = config.run_name + experiment_name
@@ -141,17 +95,7 @@ config.save_model_path = os.path.join('ckpt_models', config.save_model_path)
 os.makedirs(config.save_model_path, exist_ok=True)
 
 # Save config as config.npy (NumPy format)
-def save_config(config, filepath):
-    """Save config object (class instance) as a NumPy .npy file."""
-    # Convert config class instance to dict, including both instance and class attributes
-    # First get class attributes (defaults defined at class level)
-    config_dict = {k: v for k, v in config.__class__.__dict__.items() if not k.startswith('__') and not callable(v)}
-    # Then update with instance attributes (those set/modified on the instance, which override class defaults)
-    config_dict.update({k: v for k, v in vars(config).items() if not k.startswith('__')})
-
-    np.save(filepath, config_dict, allow_pickle=True)
-
-save_config(config, os.path.join(config.save_model_path, 'config.npy'))
+config.save(os.path.join(config.save_model_path, 'config.npy'))
 
 set_seed(config.seed)
 
