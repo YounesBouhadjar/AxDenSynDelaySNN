@@ -7,9 +7,6 @@ Main entry point for training SNN models with delays.
 import torch
 import wandb
 import os
-import numpy as np
-from utils import set_seed
-from utils import load_config
 
 from datasets import SHD_dataloaders, SSC_dataloaders, GSC_dataloaders
 from models.snn_delays import SnnDelays
@@ -68,7 +65,7 @@ parser.add_argument('--use_regularizers', type=str2bool, default=None, help='Use
 args = parser.parse_args()
 
 try:
-    config = load_config(args.config, args)
+    config = utils.load_config(args.config, args)
 except Exception as e:
     raise Exception(f'Failed to load config from {args.config}: {e}')
 
@@ -76,7 +73,7 @@ if config.use_wandb:
     # Get all config attributes for wandb
     cfg = {k: v for k, v in vars(config).items() if not k.startswith('__') and not callable(v)}
 
-    experiment_name = f'_seed_{config.seed}_{config.delay_type}_{config.dataset}_{config.time_step}ms_n_hidden_layers_{config.n_hidden_layers}_n_hidden_neurons_{config.n_hidden_neurons}'
+    experiment_name = f'_seed_{config.seed}_{config.delay_type}_dmax_{config.max_delay}ms_{config.dataset}_sparsity_p_{config.sparsity_p}_sparsity_p_delay_{config.sparsity_p_delay}'
     run_name = config.run_name + experiment_name
     config.save_model_path = run_name
     wandb.init(
@@ -87,7 +84,7 @@ if config.use_wandb:
 else:
     # If wandb is not used, set a default save path
     if not hasattr(config, 'save_model_path') or config.save_model_path is None:
-        experiment_name = f'seed_{config.seed}_{config.delay_type}_{config.dataset}_{config.time_step}ms_n_hidden_layers_{config.n_hidden_layers}_n_hidden_neurons_{config.n_hidden_neurons}'
+        experiment_name = f'seed_{config.seed}_{config.delay_type}_dmax_{config.max_delay}ms_{config.dataset}_sparsity_p_{config.sparsity_p}_sparsity_p_delay_{config.sparsity_p_delay}'
         config.save_model_path = config.run_name + experiment_name
 
 # Create directory for saving model and config inside ckpt_models
@@ -97,7 +94,7 @@ os.makedirs(config.save_model_path, exist_ok=True)
 # Save config as config.npy (NumPy format)
 config.save(os.path.join(config.save_model_path, 'config.npy'))
 
-set_seed(config.seed)
+utils.set_seed(config.seed)
 
 if config.model_type == 'snn':
     model = SNN(config).to(device)

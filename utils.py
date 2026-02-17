@@ -1,9 +1,6 @@
 """
 Utility functions for SNN models with delays.
 
-Modified from:
-https://github.com/Thvnvtos/SNN-delays
-
 MIT License
 Copyright (c) 2025
 """
@@ -99,10 +96,11 @@ class Config:
             else:
                 setattr(self, key, value)
 
-        # Overwrite config parameters with command-line arguments if provided
+        # Overwrite / extend config parameters with command-line arguments if provided
+        # This will also ADD new attributes that are only defined via CLI (not in YAML)
         if args:
             for arg_key, arg_value in vars(args).items():
-                if arg_value is not None and hasattr(self, arg_key):
+                if arg_value is not None:
                     setattr(self, arg_key, arg_value)
 
         # Compute derived values
@@ -172,6 +170,7 @@ class Config:
         # Ensure max_delay is odd
         if self.max_delay % 2 == 0:
             self.max_delay = self.max_delay + 1
+            self.max_delay_ms = self.max_delay * self.time_step
         
         # Delay-related computed values
         if not hasattr(self, 'sigInit') or self.sigInit is None:
