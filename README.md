@@ -3,8 +3,6 @@
 This repository contains source code to reproduce the experiments presented in the paper "Sparse Axonal and Dendritic Delays Enable Competitive SNNs for Keyword Classification" (2026), arXiv preprint [arXiv:2602.09746](https://arxiv.org/abs/2602.09746).
 This implementation builds heavily on the original repository [https://github.com/Thvnvtos/SNN-delays](https://github.com/Thvnvtos/SNN-delays), which is the official implementation of "Learning Delays in Spiking Neural Networks using Dilated Convolutions with Learnable Spacings" (ICLR 2024). Compared to the original codebase, this version improves readability and overall structure, and includes the implementation of axonal and dendritic delays.
 
-> **⚠️ Warning**: The code does not yet include all experiments from the paper, and some parts of the codebase have not been fully tested after recent cleanup and refactoring. These issues will be addressed very shortly.
-
 ## Installation
 
 1. Install uv:
